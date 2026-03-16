@@ -12,40 +12,54 @@ export interface Store {
   active: boolean;
 }
 
-/**
- * Obtener todas las tiendas
- */
-export const getStores = async (): Promise<Store[]> => {
-  return await api("/store");
+export interface PagedStores {
+  content: Store[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}
+
+export const getStores = async (
+  page = 0,
+  size = 10,
+  filters: {
+    city?: string;
+    name?: string;
+    status?: string;
+    actorType?: string;
+  } = {}
+): Promise<PagedStores> => {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("size", String(size));
+  params.set("sortBy", "createdAt");
+  params.set("sortDir", "desc");
+
+  if (filters.city)      params.set("city", filters.city);
+  if (filters.name)      params.set("name", filters.name);
+  if (filters.status)    params.set("status", filters.status);
+  if (filters.actorType) params.set("actorType", filters.actorType);
+
+  return await api.get(`/admin/stores?${params.toString()}`);
 };
 
-/**
- * Aprobar tienda
- */
-export const approveStore = async (id: number) => {
-  return await api(`/admin/stores/${id}/approve`, {
-    method: "PUT",
-  });
+export const getPendingStores = async (
+  page = 0,
+  size = 10
+): Promise<PagedStores> => {
+  return await api.get(`/admin/stores/pending?page=${page}&size=${size}`);
 };
 
-/**
- * Suspender tienda
- */
-export const suspendStore = async (id: number) => {
-  return await api(`/admin/${id}/suspend`, {
-    method: "PUT",
-  });
+export const approveStore = async (id: number): Promise<Store> => {
+  return await api.put(`/admin/stores/${id}/approve`, {}); // ✅ body vacío, no el método
 };
 
-/**
- * Obtener tienda por ID
- */
+export const suspendStore = async (id: number): Promise<Store> => {
+  return await api.put(`/admin/stores/${id}/suspend`, {}); // ✅ body vacío
+};
+
 export const getStoreById = async (id: number): Promise<Store> => {
-  return await api(`/store/${id}`);
-};
-/**
- * Obtener tiendas pendientes de aprobación
- */
-export const getPendingStores = async (): Promise<Store[]> => {
-  return await api("/admin/pending");
+  return await api.get(`/store/${id}`);
 };

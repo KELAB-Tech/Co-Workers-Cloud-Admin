@@ -1,14 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  images: {
-    domains: ["example.com"],
+   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "mi-cdn.com",
-        
-      },
+      { protocol: "https", hostname: "placehold.co" },
+      { protocol: "https", hostname: "res.cloudinary.com" },
+      { protocol: "https", hostname: "example.com" },
+      { protocol: "https", hostname: "**" }, // ← permite cualquier dominio externo
     ],
   },
   /* config options here */

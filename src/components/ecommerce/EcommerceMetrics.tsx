@@ -4,155 +4,101 @@ import React, { useEffect, useState } from "react";
 import Badge from "../ui/badge/Badge";
 import { ArrowUpIcon, BoxIconLine, GroupIcon } from "@/icons";
 import { StoreIcon } from "lucide-react";
-import { api } from "@/utils/api";
+import { getDashboard, DashboardData } from "@/services/dashboardService";
 
-type DashboardMetrics = {
-  totalUsers: number;
-  activeUsers: number;
-  totalStores: number;
-  approvedStores: number;
-  totalProducts: number;
-  activeProducts: number;
-};
+function MetricCard({
+  icon, label, value, badge,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  badge: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+      <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
+        {icon}
+      </div>
+      <div className="flex items-end justify-between mt-5">
+        <div>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
+          <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
+            {value.toLocaleString("es-CO")}
+          </h4>
+        </div>
+        {badge}
+      </div>
+    </div>
+  );
+}
 
 export const EcommerceMetrics = () => {
-
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [data,    setData]    = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-
-    async function loadDashboard() {
-      try {
-
-        const data = await api("/admin/dashboard");
-
-        console.log("Dashboard:", data);
-
-        setMetrics({
-          totalUsers: data.totalUsers,
-          activeUsers: data.activeUsers,
-          totalStores: data.totalStores,
-          approvedStores: data.approvedStores,
-          totalProducts: data.totalProducts,
-          activeProducts: data.activeProducts,
-        });
-
-      } catch (error) {
-
-        console.error("Dashboard error:", error);
-
-      } finally {
-
-        setLoading(false);
-
-      }
-    }
-
-    loadDashboard();
-
+    getDashboard()
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
-    return <div className="p-6">Loading dashboard...</div>;
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 md:gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/[0.03] animate-pulse h-32" />
+        ))}
+      </div>
+    );
   }
 
-  if (!metrics) {
-    return <div className="p-6">No dashboard data</div>;
-  }
+  if (!data) return null;
+
+  const metrics = [
+    {
+      icon:  <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />,
+      label: "Usuarios",
+      value: data.totalUsers,
+      badge: <Badge color="success"><ArrowUpIcon />{data.activeUsers} activos</Badge>,
+    },
+    {
+      icon:  <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />,
+      label: "Suspendidos",
+      value: data.suspendedUsers,
+      badge: <Badge color={data.suspendedUsers > 0 ? "error" : "success"}>{data.suspendedUsers === 0 ? "Ninguno" : "Revisar"}</Badge>,
+    },
+    {
+      icon:  <StoreIcon className="text-gray-800 size-6 dark:text-white/90" />,
+      label: "Tiendas",
+      value: data.totalStores,
+      badge: <Badge color="success">{data.approvedStores} aprobadas</Badge>,
+    },
+    {
+      icon:  <StoreIcon className="text-gray-800 size-6 dark:text-white/90" />,
+      label: "Tiendas Pendientes",
+      value: data.pendingStores,
+      badge: <Badge color={data.pendingStores > 0 ? "warning" : "success"}>{data.pendingStores > 0 ? "Revisar" : "Al día"}</Badge>,
+    },
+    {
+      icon:  <BoxIconLine className="text-gray-800 size-6 dark:text-white/90" />,
+      label: "Productos",
+      value: data.totalProducts,
+      badge: <Badge color="success">{data.activeProducts} activos</Badge>,
+    },
+    {
+      icon:  <BoxIconLine className="text-gray-800 size-6 dark:text-white/90" />,
+      label: "Destacados",
+      value: data.featuredProducts,
+      badge: <Badge color="warning">⭐ featured</Badge>,
+    },
+  ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 md:gap-6">
-
-      {/* USERS */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
-          <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />
-        </div>
-
-        <div className="flex items-end justify-between mt-5">
-          <div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Usuarios
-            </span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              {metrics.totalUsers}
-            </h4>
-          </div>
-
-          <Badge color="success">
-            <ArrowUpIcon />
-            {metrics.activeUsers} activos
-          </Badge>
-        </div>
-      </div>
-
-      {/* STORES */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
-          <StoreIcon className="text-gray-800 size-6 dark:text-white/90" />
-        </div>
-
-        <div className="flex items-end justify-between mt-5">
-          <div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Tiendas
-            </span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              {metrics.totalStores}
-            </h4>
-          </div>
-
-          <Badge color="success">
-            {metrics.approvedStores} aprobadas
-          </Badge>
-        </div>
-      </div>
-
-      {/* PRODUCTS */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
-          <BoxIconLine className="text-gray-800 size-6 dark:text-white/90" />
-        </div>
-
-        <div className="flex items-end justify-between mt-5">
-          <div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Productos
-            </span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              {metrics.totalProducts}
-            </h4>
-          </div>
-
-          <Badge color="success">
-            {metrics.activeProducts} activos
-          </Badge>
-        </div>
-      </div>
-
-      {/* ACTIVE PRODUCTS */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
-          <BoxIconLine className="text-gray-800 size-6 dark:text-white/90" />
-        </div>
-
-        <div className="flex items-end justify-between mt-5">
-          <div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Productos Activos
-            </span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              {metrics.activeProducts}
-            </h4>
-          </div>
-
-          <Badge color="success">
-            OK
-          </Badge>
-        </div>
-      </div>
-
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 md:gap-6">
+      {metrics.map((m) => (
+        <MetricCard key={m.label} {...m} />
+      ))}
     </div>
   );
 };

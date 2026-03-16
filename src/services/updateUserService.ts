@@ -3,15 +3,27 @@ import { api } from "@/utils/api";
 export interface UpdateUserPayload {
   name: string;
   email: string;
-  password?: string;
   tipoPersona: "NATURAL" | "JURIDICA";
   actorType: string;
-  afiliado: boolean;
+  // ✅ sin password ni afiliado — el backend no los acepta en este endpoint
 }
 
-export const updateUser = async (id: number, payload: UpdateUserPayload): Promise<void> => {
-  return await api(`/admin/users/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+export interface UpdateUserResponse {
+  id: number;
+  name: string;
+  email: string;
+  tipoPersona: string;
+  actorType: string;
+  roles: string[];
+  afiliado: boolean;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const updateUser = async (
+  id: number,
+  payload: UpdateUserPayload
+): Promise<UpdateUserResponse> => {
+  return await api.put(`/admin/users/${id}`, payload);
 };

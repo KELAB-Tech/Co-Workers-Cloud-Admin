@@ -1,8 +1,14 @@
+import Cookies from "js-cookie";
+
 export const API_URL = "http://localhost:8080/api";
 
-export const api = async (endpoint: string, options: RequestInit = {}) => {
+const getToken = () =>
+  typeof window !== "undefined"
+    ? Cookies.get("token") || localStorage.getItem("token") || ""
+    : "";
 
-  const token = localStorage.getItem("token");
+const request = async (endpoint: string, options: RequestInit = {}) => {
+  const token = getToken();
 
   const res = await fetch(`${API_URL}${endpoint}`, {
     ...options,
@@ -13,11 +19,22 @@ export const api = async (endpoint: string, options: RequestInit = {}) => {
     },
   });
 
-  const data = await res.json();
+  if (res.status === 204) return null;
+
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
 
   if (!res.ok) {
-    throw new Error(data.message || "Error en la petición");
+    throw new Error(data?.message || data?.error || "Error en la petición");
   }
 
   return data;
+};
+
+export const api = {
+  get:    (endpoint: string)              => request(endpoint),
+  post:   (endpoint: string, data: any)  => request(endpoint, { method: "POST",   body: JSON.stringify(data) }),
+  put:    (endpoint: string, data: any)  => request(endpoint, { method: "PUT",    body: JSON.stringify(data) }),
+  patch:  (endpoint: string, data?: any) => request(endpoint, { method: "PATCH",  body: data ? JSON.stringify(data) : undefined }),
+  delete: (endpoint: string)             => request(endpoint, { method: "DELETE" }),
 };

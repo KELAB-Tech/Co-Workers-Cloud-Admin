@@ -1,53 +1,50 @@
 "use client";
 
-import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { ChevronLeftIcon } from "@/icons";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { updateUser } from "@/services/updateUserService";
-import { getUsers } from "@/services/userService";
+import { getUserById, User } from "@/services/userService";
 
 export default function EditUserForm() {
+  const router  = useRouter();
+  const params  = useParams();
+  const userId  = Number(params.id);
 
-  const router = useRouter();
-  const params = useParams();
-  const userId = Number(params.id);
-  const [showPassword, setShowPassword] = useState(false);
-  const [afiliado, setAfiliado] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading,  setLoading]  = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+  const [success,  setSuccess]  = useState(false);
+  const [user,     setUser]     = useState<User | null>(null); // ✅ guardamos el usuario original
 
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
+    name:        "",
+    email:       "",
     tipoPersona: "NATURAL",
-    actorType: "RECICLADOR",
+    actorType:   "RECICLADOR",
   });
 
-  // Load existing user data
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const users = await getUsers();
-        const user = users.find((u) => u.id === userId);
-        if (!user) throw new Error("Usuario no encontrado");
+    if (!userId) return;
 
+    const fetchUser = async () => {
+      setFetching(true);
+      setError(null);
+      try {
+        const data = await getUserById(userId);
+        setUser(data);
+        // ✅ Aquí se cargan los datos en el formulario
         setFormData({
-          name: user.name,
-          email: user.email,
-          password: "",
-          tipoPersona: user.tipoPersona,
-          actorType: user.actorType,
+          name:        data.name        ?? "",
+          email:       data.email       ?? "",
+          tipoPersona: data.tipoPersona ?? "NATURAL",
+          actorType:   data.actorType   ?? "RECICLADOR",
         });
-        setAfiliado(user.afiliado);
       } catch (err: any) {
-        setError(err.message || "Error al cargar el usuario");
+        setError(err.message || "No se pudo cargar el usuario");
       } finally {
         setFetching(false);
       }
@@ -56,16 +53,10 @@ export default function EditUserForm() {
     fetchUser();
   }, [userId]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const generatePassword = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$";
-    const randomPass = Array.from({ length: 12 }, () =>
-      chars[Math.floor(Math.random() * chars.length)]
-    ).join("");
-    setFormData({ ...formData, password: randomPass });
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,26 +65,15 @@ export default function EditUserForm() {
     setLoading(true);
 
     try {
-      const payload: any = {
-        name: formData.name,
-        email: formData.email,
+      await updateUser(userId, {
+        name:        formData.name.trim(),
+        email:       formData.email.trim().toLowerCase(),
         tipoPersona: formData.tipoPersona as "NATURAL" | "JURIDICA",
-        actorType: formData.actorType,
-        afiliado,
-      };
-
-      // Only send password if the admin filled it in
-      if (formData.password.trim()) {
-        payload.password = formData.password;
-      }
-
-      await updateUser(userId, payload);
+        actorType:   formData.actorType,
+      });
 
       setSuccess(true);
-      setTimeout(() => {
-        router.push("/management/users");
-      }, 1500);
-
+      setTimeout(() => router.push("/management/users"), 1500);
     } catch (err: any) {
       setError(err.message || "Error al actualizar el usuario");
     } finally {
@@ -101,22 +81,38 @@ export default function EditUserForm() {
     }
   };
 
+  // ✅ Pantalla de carga mientras trae los datos
   if (fetching) {
     return (
-      <div className="flex items-center justify-center py-24 text-sm text-gray-500">
-        Cargando usuario...
+      <div className="flex flex-col items-center justify-center py-24 gap-3">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-gray-500">Cargando datos del usuario...</p>
+      </div>
+    );
+  }
+
+  // ✅ Si el usuario no existe
+  if (!user && !fetching) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <p className="text-sm text-red-500">Usuario no encontrado.</p>
+        <Link href="/management/users">
+          <button className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+            Volver a usuarios
+          </button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="w-full mx-auto">
+    <div className="w-full mx-auto max-w-2xl">
 
-      {/* Back button */}
+      {/* Back */}
       <div className="mb-6">
         <Link
           href="/management/users"
-          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           <ChevronLeftIcon />
           Volver a usuarios
@@ -126,24 +122,31 @@ export default function EditUserForm() {
       {/* Card */}
       <div className="p-8 bg-white border border-gray-200 rounded-xl dark:bg-white/[0.03] dark:border-white/[0.05]">
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="mb-2 text-xl font-semibold text-gray-800 dark:text-white">
-            Editar Usuario
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Modifica los datos del usuario. Deja la contraseña en blanco para no cambiarla.
-          </p>
+        {/* Header con info del usuario */}
+        <div className="mb-8 pb-6 border-b border-gray-100 dark:border-white/[0.05]">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shrink-0">
+              {user?.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-800 dark:text-white">
+                Editar Usuario
+              </h1>
+              <p className="text-sm text-gray-400">
+                ID #{userId} · {user?.enabled ? "✅ Activo" : "🔴 Suspendido"}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Success message */}
+        {/* Success */}
         {success && (
           <div className="mb-6 px-4 py-3 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-700 dark:text-green-400">
-            ✅ Usuario actualizado exitosamente. Redirigiendo...
+            Usuario actualizado correctamente. Redirigiendo...
           </div>
         )}
 
-        {/* Error message */}
+        {/* Error */}
         {error && (
           <div className="mb-6 px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-700 dark:text-red-400">
             ❌ {error}
@@ -151,49 +154,64 @@ export default function EditUserForm() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
+          <div className="space-y-5">
 
             {/* Nombre */}
             <div>
               <Label>
-                Nombre o Razón Social<span className="text-error-500">*</span>
+                Nombre o Razón Social <span className="text-red-500">*</span>
               </Label>
               <Input
                 type="text"
                 name="name"
-                placeholder="Ej: EcoTransforma SAS"
-                value={formData.name}
+                value={formData.name}         // ✅ controlado
                 onChange={handleChange}
+                placeholder="Ej: EcoTransforma SAS"
                 required
               />
             </div>
 
-            {/* Tipo persona */}
+            {/* Email */}
             <div>
               <Label>
-                Tipo de Persona<span className="text-error-500">*</span>
+                Correo electrónico <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="email"
+                name="email"
+                value={formData.email}        // ✅ controlado
+                onChange={handleChange}
+                placeholder="empresa@email.com"
+                required
+              />
+            </div>
+
+            {/* Tipo Persona */}
+            <div>
+              <Label>
+                Tipo de Persona <span className="text-red-500">*</span>
               </Label>
               <select
                 name="tipoPersona"
-                value={formData.tipoPersona}
+                value={formData.tipoPersona}  // ✅ controlado
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="NATURAL">Persona Natural</option>
                 <option value="JURIDICA">Persona Jurídica</option>
               </select>
             </div>
 
-            {/* Actor type */}
+            {/* Actor Type */}
             <div>
               <Label>
-                Tipo de Actor<span className="text-error-500">*</span>
+                Tipo de Actor <span className="text-red-500">*</span>
               </Label>
               <select
                 name="actorType"
-                value={formData.actorType}
+                value={formData.actorType}    // ✅ controlado
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="RECICLADOR">Reciclador</option>
                 <option value="TRANSFORMADOR">Transformador</option>
@@ -202,76 +220,41 @@ export default function EditUserForm() {
               </select>
             </div>
 
-            {/* Email */}
-            <div>
-              <Label>
-                Correo electrónico<span className="text-error-500">*</span>
-              </Label>
-              <Input
-                type="email"
-                name="email"
-                placeholder="empresa@email.com"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <Label>
-                Nueva Contraseña{" "}
-                <span className="text-gray-400 font-normal">(opcional)</span>
-              </Label>
-
-              <div className="relative">
-                <Input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Dejar en blanco para no cambiar"
-                  value={formData.password}
-                  onChange={handleChange}
-                />
-                <span
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute cursor-pointer right-4 top-1/2 -translate-y-1/2"
-                >
-                  {showPassword ? (
-                    <EyeIcon className="fill-gray-500 dark:fill-gray-400" />
-                  ) : (
-                    <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />
-                  )}
+            {/* Info readonly — solo visual */}
+            <div className="rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.05] p-4 space-y-2">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
+                Información de la cuenta
+              </p>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Roles</span>
+                <span className="text-gray-700 dark:text-gray-300 font-medium">
+                  {user?.roles.map((r) => r.replace("ROLE_", "")).join(", ") || "—"}
                 </span>
               </div>
-
-              <button
-                type="button"
-                onClick={generatePassword}
-                className="mt-2 text-sm text-brand-500 hover:text-brand-600"
-              >
-                Generar contraseña automática
-              </button>
-            </div>
-
-            {/* Afiliado */}
-            <div className="flex items-center gap-3">
-              <Checkbox
-                className="w-5 h-5"
-                checked={afiliado}
-                onChange={setAfiliado}
-              />
-              <p className="text-gray-500 dark:text-gray-400">
-                Usuario afiliado
-              </p>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Afiliado</span>
+                <span className="text-gray-700 dark:text-gray-300 font-medium">
+                  {user?.afiliado ? "Sí" : "No"}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Creado</span>
+                <span className="text-gray-700 dark:text-gray-300 font-medium">
+                  {user?.createdAt
+                    ? new Date(user.createdAt).toLocaleDateString("es-CO", {
+                        year: "numeric", month: "long", day: "2-digit",
+                      })
+                    : "—"}
+                </span>
+              </div>
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3 pt-4">
-
+            <div className="flex gap-3 pt-2">
               <Link href="/management/users" className="flex-1">
                 <button
                   type="button"
-                  className="w-full px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:bg-transparent dark:border-gray-600 dark:hover:bg-white/[0.05]"
+                  className="w-full px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:bg-transparent dark:border-gray-600 dark:hover:bg-white/[0.05] transition-colors"
                 >
                   Cancelar
                 </button>
@@ -280,11 +263,13 @@ export default function EditUserForm() {
               <button
                 type="submit"
                 disabled={loading || success}
-                className="flex-1 flex items-center justify-center px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? "Guardando cambios..." : "Guardar Cambios"}
+                {loading && (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                )}
+                {loading ? "Guardando..." : "Guardar Cambios"}
               </button>
-
             </div>
 
           </div>

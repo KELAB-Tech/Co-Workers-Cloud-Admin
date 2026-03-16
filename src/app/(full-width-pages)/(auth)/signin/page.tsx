@@ -2,7 +2,7 @@ import SignInForm from "@/components/auth/SignInForm";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Login - Co-Workers Cloud",
+  title: "Admin Login - Co-Workers Cloud",
   description: "Inicia sesión en tu cuenta de Co-Workers Cloud. ¡Bienvenido de nuevo!",
 };
 

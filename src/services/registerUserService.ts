@@ -10,8 +10,5 @@ export interface RegisterUserPayload {
 }
 
 export const registerUser = async (payload: RegisterUserPayload): Promise<void> => {
-  return await api("/auth/register", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return await api.post("/auth/register", payload);
 };
