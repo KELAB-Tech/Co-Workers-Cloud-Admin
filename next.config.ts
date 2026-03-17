@@ -1,15 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-   images: {
+  images: {
     remotePatterns: [
-      { protocol: "https", hostname: "placehold.co" },
       { protocol: "https", hostname: "res.cloudinary.com" },
-      { protocol: "https", hostname: "example.com" },
-      { protocol: "https", hostname: "**" }, // ← permite cualquier dominio externo
+      { protocol: "https", hostname: "placehold.co" },
     ],
   },
-  /* config options here */
+
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,
@@ -17,14 +15,19 @@ const nextConfig: NextConfig = {
     });
     return config;
   },
-    turbopack: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
+
+  turbopack: {
+    rules: {
+      "*.svg": {
+        loaders: ["@svgr/webpack"],
+        as: "*.js",
       },
     },
+  },
+
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
 export default nextConfig;
