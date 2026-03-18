@@ -1,86 +1,68 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// ✅ Decodifica el payload del JWT sin librería (solo base64)
-function decodeJwtPayload(token: string): Record<string, any> | null {
-  try {
-    const base64Payload = token.split(".")[1];
-    if (!base64Payload) return null;
+interface JwtPayload {
+  exp?: number;
+  roles?: string[];
+  authorities?: string[];
+}
 
-    // Padding para base64
-    const padded = base64Payload.replace(/-/g, "+").replace(/_/g, "/");
-    const decoded = Buffer.from(padded, "base64").toString("utf-8");
-    return JSON.parse(decoded);
+function decodeJwtPayload(token: string): JwtPayload | null {
+  try {
+    const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
   } catch {
     return null;
   }
 }
 
-function hasAdminRole(token: string): boolean {
-  const payload = decodeJwtPayload(token);
-  if (!payload) return false;
-
-  // Spring Security guarda los roles en "roles" o "authorities"
-  const roles: string[] =
-    payload.roles ??
-    payload.authorities ??
-    payload.scope?.split(" ") ??
-    [];
-
-  return roles.includes("ROLE_ADMIN");
-}
-
 function isTokenExpired(token: string): boolean {
   const payload = decodeJwtPayload(token);
   if (!payload?.exp) return true;
-  // exp está en segundos, Date.now() en milisegundos
   return Date.now() >= payload.exp * 1000;
 }
 
-export function proxy(request: NextRequest) {
+function hasAdminRole(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return false;
+  const roles: string[] = payload.roles ?? payload.authorities ?? [];
+  return roles.includes("ROLE_ADMIN");
+}
+
+export function middleware(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   const { pathname } = request.nextUrl;
 
-  const publicRoutes = ["/signin"];
-  const isPublic = publicRoutes.some((r) => pathname.startsWith(r));
+  const publicRoutes = ["/signin", "/signup"];
+  const isPublic = publicRoutes.some(r => pathname.startsWith(r));
 
-  // Sin token → a signin
+  // Sin token → signin
   if (!token && !isPublic) {
-    const response = NextResponse.redirect(new URL("/signin", request.url));
-    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
-    response.headers.set("Pragma", "no-cache");
-    response.headers.set("Expires", "0");
-    return response;
+    return NextResponse.redirect(new URL("/signin", request.url));
   }
 
   if (token) {
-    // ✅ Token expirado → limpiar cookie y redirigir
+    // Token expirado
     if (isTokenExpired(token)) {
-      const response = NextResponse.redirect(new URL("/signin", request.url));
-      response.cookies.delete("token");
-      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
-      return response;
+      const res = NextResponse.redirect(new URL("/signin", request.url));
+      res.cookies.delete("token");
+      return res;
     }
 
-    // ✅ Token válido pero sin rol ADMIN → acceso denegado
+    // Token válido pero sin rol admin → signin
     if (!isPublic && !hasAdminRole(token)) {
-      const response = NextResponse.redirect(new URL("/signin?error=unauthorized", request.url));
-      response.cookies.delete("token"); // limpiamos la cookie inválida
-      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
-      return response;
+      const res = NextResponse.redirect(new URL("/signin?error=unauthorized", request.url));
+      res.cookies.delete("token");
+      return res;
     }
 
-    // Ya logueado como admin intentando entrar a signin
+    // Ya logueado e intenta entrar a signin → dashboard
     if (isPublic && hasAdminRole(token)) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
 
-  // Ruta protegida con token válido y rol correcto
-  const response = NextResponse.next();
-  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  response.headers.set("Pragma", "no-cache");
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

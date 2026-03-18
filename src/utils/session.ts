@@ -1,19 +1,24 @@
 import Cookies from "js-cookie";
 
-const TOKEN_KEY     = "token";
-const LAST_ACTIVE   = "last_active";
-const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutos
-let   destroying    = false;
+const TOKEN_KEY = "token";
+const LAST_ACTIVE = "last_active";
+const INACTIVITY_MS = 30 * 60 * 1000; // 30 min
+let destroying = false;
+
+interface UserData {
+  roles: string[];
+  [key: string]: any;
+}
 
 export const session = {
-
-  set(token: string) {
+  set(token: string, userData?: UserData) {
     Cookies.set(TOKEN_KEY, token, {
-      expires: 1 / 3, // 8 horas
+      expires: 1 / 3,
       sameSite: "strict",
       secure: process.env.NODE_ENV === "production",
     });
     localStorage.setItem(LAST_ACTIVE, String(Date.now()));
+    if (userData) localStorage.setItem("user", JSON.stringify(userData));
     destroying = false;
   },
 
@@ -22,9 +27,7 @@ export const session = {
   },
 
   touch() {
-    if (this.get()) {
-      localStorage.setItem(LAST_ACTIVE, String(Date.now()));
-    }
+    if (this.get()) localStorage.setItem(LAST_ACTIVE, String(Date.now()));
   },
 
   isExpiredByInactivity(): boolean {
@@ -50,11 +53,9 @@ export const session = {
   destroy() {
     if (destroying) return;
     destroying = true;
-
     Cookies.remove(TOKEN_KEY, { path: "/" });
     localStorage.removeItem(LAST_ACTIVE);
     localStorage.removeItem("user");
-
     window.location.replace("/signin");
   },
 };

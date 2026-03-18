@@ -7,7 +7,10 @@ import { StoreIcon } from "lucide-react";
 import { getDashboard, DashboardData } from "@/services/dashboardService";
 
 function MetricCard({
-  icon, label, value, badge,
+  icon,
+  label,
+  value,
+  badge,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -33,7 +36,7 @@ function MetricCard({
 }
 
 export const EcommerceMetrics = () => {
-  const [data,    setData]    = useState<DashboardData | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,11 +46,18 @@ export const EcommerceMetrics = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // GRID: 1 col móvil, 2 col sm, 3 col md+, 2 filas de 3 cards
+  const gridClass =
+    "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6";
+
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 md:gap-6">
+      <div className={gridClass}>
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/[0.03] animate-pulse h-32" />
+          <div
+            key={i}
+            className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/[0.03] animate-pulse h-32"
+          />
         ))}
       </div>
     );
@@ -57,37 +67,50 @@ export const EcommerceMetrics = () => {
 
   const metrics = [
     {
-      icon:  <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />,
+      icon: <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />,
       label: "Usuarios",
       value: data.totalUsers,
-      badge: <Badge color="success"><ArrowUpIcon />{data.activeUsers} activos</Badge>,
+      badge: (
+        <Badge color="success">
+          <ArrowUpIcon />
+          {data.activeUsers} activos
+        </Badge>
+      ),
     },
     {
-      icon:  <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />,
+      icon: <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />,
       label: "Suspendidos",
       value: data.suspendedUsers,
-      badge: <Badge color={data.suspendedUsers > 0 ? "error" : "success"}>{data.suspendedUsers === 0 ? "Ninguno" : "Revisar"}</Badge>,
+      badge: (
+        <Badge color={data.suspendedUsers > 0 ? "error" : "success"}>
+          {data.suspendedUsers === 0 ? "Ninguno" : "Revisar"}
+        </Badge>
+      ),
     },
     {
-      icon:  <StoreIcon className="text-gray-800 size-6 dark:text-white/90" />,
+      icon: <StoreIcon className="text-gray-800 size-6 dark:text-white/90" />,
       label: "Tiendas",
       value: data.totalStores,
       badge: <Badge color="success">{data.approvedStores} aprobadas</Badge>,
     },
     {
-      icon:  <StoreIcon className="text-gray-800 size-6 dark:text-white/90" />,
+      icon: <StoreIcon className="text-gray-800 size-6 dark:text-white/90" />,
       label: "Tiendas Pendientes",
       value: data.pendingStores,
-      badge: <Badge color={data.pendingStores > 0 ? "warning" : "success"}>{data.pendingStores > 0 ? "Revisar" : "Al día"}</Badge>,
+      badge: (
+        <Badge color={data.pendingStores > 0 ? "warning" : "success"}>
+          {data.pendingStores > 0 ? "Revisar" : "Al día"}
+        </Badge>
+      ),
     },
     {
-      icon:  <BoxIconLine className="text-gray-800 size-6 dark:text-white/90" />,
+      icon: <BoxIconLine className="text-gray-800 size-6 dark:text-white/90" />,
       label: "Productos",
       value: data.totalProducts,
       badge: <Badge color="success">{data.activeProducts} activos</Badge>,
     },
     {
-      icon:  <BoxIconLine className="text-gray-800 size-6 dark:text-white/90" />,
+      icon: <BoxIconLine className="text-gray-800 size-6 dark:text-white/90" />,
       label: "Destacados",
       value: data.featuredProducts,
       badge: <Badge color="warning">⭐ featured</Badge>,
@@ -95,7 +118,7 @@ export const EcommerceMetrics = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 md:gap-6">
+    <div className={gridClass}>
       {metrics.map((m) => (
         <MetricCard key={m.label} {...m} />
       ))}
