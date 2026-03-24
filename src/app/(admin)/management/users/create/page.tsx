@@ -154,6 +154,10 @@ export default function CreateUserForm() {
                 <option value="TRANSFORMADOR">Transformador</option>
                 <option value="TRANSPORTADOR">Transportador</option>
                 <option value="ADMIN_GENERAL">Administrador General</option>
+
+                {/* nuevos */}
+                <option value="PLAN_COLECTIVO">Plan Colectivo</option>
+                <option value="SOSTENIBILIDAD">Sostenibilidad</option>
               </select>
             </div>
 
